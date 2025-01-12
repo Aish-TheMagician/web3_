@@ -62,29 +62,103 @@
                 "type": "function"
             }
         ]
-        let MoodContract;
-        let signer
-        const provider = new ethers.providers.Web3Provider(window.ethereum, "sepolia");
-        provider.send("eth_requestAccounts", []).then(() => {
-            provider.listAccounts().then((accounts) => {
-                signer = provider.getSigner(accounts[0]);
-                MoodContract = new ethers.Contract(
-                    MoodContractAddress,
-                    MoodContractABI,
-                    signer
-                );
-            });
-        });
-        async function getMood() {
-            const getMoodPromise = MoodContract.getMood();
-            const Mood = await getMoodPromise;
-            console.log(Mood);
+        <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My First dApp</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
         }
+        div {
+            width: 20%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+        button {
+            width: 100%;
+            margin: 10px 0px 5px 0px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>This is my dApp!</h1>
+        <p>Here we can set or get the mood:</p>
+        <label for="mood">Input Mood:</label>
+        <input type="text" id="mood" />
+        <button onclick="getMood()">Get Mood</button>
+        <button onclick="setMood()">Set Mood</button>
+    </div>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <script>
+        const MoodContractAddress = process.env.CONTRACT_ADDRESS || "<YOUR_CONTRACT_ADDRESS>";
+        
+        import MoodContractABI from './moodContractABI.json'; // Import ABI from a secure JSON file
+
+        let MoodContract;
+        let signer;
+
+        async function initialize() {
+            if (typeof window.ethereum === "undefined") {
+                alert("MetaMask is not installed. Please install it to use this dApp.");
+                return;
+            }
+
+            const provider = new ethers.providers.Web3Provider(window.ethereum, "sepolia");
+            await provider.send("eth_requestAccounts", []);
+
+            const accounts = await provider.listAccounts();
+            signer = provider.getSigner(accounts[0]);
+
+            const network = await provider.getNetwork();
+            if (network.name !== "sepolia") {
+                alert("Please switch to the Sepolia test network.");
+                return;
+            }
+
+            MoodContract = new ethers.Contract(
+                MoodContractAddress,
+                MoodContractABI,
+                signer
+            );
+        }
+
+        async function getMood() {
+            try {
+                const Mood = await MoodContract.getMood();
+                console.log(Mood);
+                alert(`Current Mood: ${Mood}`);
+            } catch (error) {
+                console.error("Error fetching mood:", error);
+                alert("Failed to fetch mood. Please try again.");
+            }
+        }
+
         async function setMood() {
             const mood = document.getElementById("mood").value;
-            const setMoodPromise = MoodContract.setMood(mood);
-            await setMoodPromise;
+
+            if (!mood || mood.trim() === "" || mood.length > 100) {
+                alert("Please enter a valid mood (1-100 characters).");
+                return;
+            }
+
+            try {
+                const tx = await MoodContract.setMood(mood);
+                await tx.wait();
+                alert("Mood set successfully!");
+            } catch (error) {
+                console.error("Error setting mood:", error);
+                alert("Failed to set mood. Please try again.");
+            }
         }
+
+        initialize();
     </script>
 </body>
 
